@@ -9,7 +9,7 @@
 
 (function($) {
 
-    $.fn.orbit = function(options) {
+    $.fn.fmslide = function(options) {
 
         //Defaults to extend options
         var defaults = {  
@@ -27,7 +27,12 @@
             bullets: false,						// true or false to activate the bullet navigation
             bulletThumbs: false,				// thumbnails for the bullets
             bulletThumbLocation: '',			// location from this file where thumbs will be
-            afterSlideChange: function(){} 		// empty function 
+            afterSlideChange: function(){}, 	// empty function 
+			onFirstSlide: function(){},			// empty function
+			onLastSlide: function(){},			// empty function
+			cycles: true,						// boolean to determine whether goNextPage and goPrevPage function are triggered
+			goNextPage: function(){},			// empty function
+			goPrevPage: function(){}			// empty function
      	};  
         
         //Extend those options
@@ -44,12 +49,15 @@
             	numberSlides = 0,
             	orbitWidth,
             	orbitHeight,
-            	locked;
+            	locked,
+				firstActive = true,
+				lastActive = false;
             
             //Initialize
             var orbit = $(this).addClass('orbit'),         
             	orbitWrapper = orbit.wrap('<div class="orbit-wrapper" />').parent();
             orbit.add(orbitWidth).width('1px').height('1px');
+
 	    	            
             //Collect all slides and set slider size of largest image
             var slides = orbit.children('img, a, div');
@@ -90,6 +98,8 @@
             		//brings in all other slides IF css declares a display: none
             		slides.css({"display":"block"})
             	});
+
+				
             
 // ==============
 // ! TIMER   
@@ -193,45 +203,42 @@
             }
 			
 			//Caption Execution
-            //Caption Execution
             function setCaption() {
             	if(!options.captions || options.captions =="false") {
             		return false; 
             	} else {
 	            	var _captionLocation = slides.eq(activeSlide).data('caption'); //get ID from rel tag on image
-	            		
-	            	if (_captionLocation){
-	            		_captionHTML = $(_captionLocation).html(); //get HTML from the matching HTML entity  
-	            		//Set HTML for the caption if it exists
-		            	if(_captionHTML) {
-		            		caption
-			            		.attr('id',_captionLocation) // Add ID caption
-			                	.html(_captionHTML); // Change HTML in Caption 
-			                //Animations for Caption entrances
-			             	if(options.captionAnimation == 'none') {
-			             		caption.show();
-			             	}
-			             	if(options.captionAnimation == 'fade') {
-			             		caption.fadeIn(options.captionAnimationSpeed);
-			             	}
-			             	if(options.captionAnimation == 'slideOpen') {
-			             		caption.slideDown(options.captionAnimationSpeed);
-			             	}
-		            	} else {
-		            		//Animations for Caption exits
-		            		if(options.captionAnimation == 'none') {
-			             		caption.hide();
-			             	}
-			             	if(options.captionAnimation == 'fade') {
-			             		caption.fadeOut(options.captionAnimationSpeed);
-			             	}
-			             	if(options.captionAnimation == 'slideOpen') {
-			             		caption.slideUp(options.captionAnimationSpeed);
-			             	}
-		            	}
+	            		_captionHTML = $(_captionLocation).html(); //get HTML from the matching HTML entity            		
+	            	//Set HTML for the caption if it exists
+	            	if(_captionHTML) {
+	            		caption
+		            		.attr('id',_captionLocation) // Add ID caption
+		                	.html(_captionHTML); // Change HTML in Caption 
+		                //Animations for Caption entrances
+		             	if(options.captionAnimation == 'none') {
+		             		caption.show();
+		             	}
+		             	if(options.captionAnimation == 'fade') {
+		             		caption.fadeIn(options.captionAnimationSpeed);
+		             	}
+		             	if(options.captionAnimation == 'slideOpen') {
+		             		caption.slideDown(options.captionAnimationSpeed);
+		             	}
+	            	} else {
+	            		//Animations for Caption exits
+	            		if(options.captionAnimation == 'none') {
+		             		caption.hide();
+		             	}
+		             	if(options.captionAnimation == 'fade') {
+		             		caption.fadeOut(options.captionAnimationSpeed);
+		             	}
+		             	if(options.captionAnimation == 'slideOpen') {
+		             		caption.slideUp(options.captionAnimationSpeed);
+		             	}
 	            	}
-		}
+				}
             }
+            
 // ==================
 // ! DIRECTIONAL NAV   
 // ==================
@@ -244,12 +251,20 @@
                 var leftBtn = orbitWrapper.children('div.slider-nav').children('span.left'),
                 	rightBtn = orbitWrapper.children('div.slider-nav').children('span.right');
                 leftBtn.click(function() { 
-                    stopClock();
-                    shift("prev");
+					if(firstActive==true && options.cycles==false){
+						options.goPrevPage.call(this);
+					} else {
+                    	stopClock();
+                    	shift("prev");
+					}
                 });
                 rightBtn.click(function() {
-                    stopClock();
-                    shift("next")
+					if(lastActive==true && options.cycles==false){
+						options.goNextPage.call(this);
+					} else {
+						stopClock();
+	                    shift("next")
+					}
                 });
             }
             
@@ -305,7 +320,24 @@
                     	.eq(prevActiveSlide)
                     	.css({"z-index" : 1});
                     unlock();
-                    options.afterSlideChange.call(this, slides.eq(prevActiveSlide), slides.eq(activeSlide));
+
+					// addition of first and last slide detection
+					if(activeSlide==0){
+						firstActive = true;
+						lastActive = false;
+						options.onFirstSlide.call(this);
+					} else if(activeSlide==numberSlides-1){
+						firstActive = false;
+						lastActive = true;
+						options.onLastSlide.call(this);
+					} else {
+						firstActive = false;
+						lastActive = false;
+					}
+					// end first and last slide detection
+					
+					options.afterSlideChange.call(this);
+                    
                 }
                 if(slides.length == "1") { return false; }
                 if(!locked) {
@@ -329,6 +361,8 @@
                             slideDirection = "prev"
                         }
                     }
+
+				
                     //set to correct bullet
                      setActiveBullet();  
                      
@@ -396,9 +430,10 @@
                         }
                     }
                     setCaption();
+
+				
                 } //lock
             }//orbit function
         });//each call
     }//orbit plugin call
 })(jQuery);
-        
