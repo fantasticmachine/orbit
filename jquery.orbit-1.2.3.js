@@ -9,7 +9,7 @@
 
 (function($) {
 
-    $.fn.fmslide = function(options) {
+    $.fn.orbit = function(options) {
 
         //Defaults to extend options
         var defaults = {  
